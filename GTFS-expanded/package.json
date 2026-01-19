@@ -9,6 +9,7 @@
     "build": "tsc"
   },
   "dependencies": {
+    "cross-env": "^10.1.0",
     "trufi-gtfs-builder": "github:trufi-association/trufi-gtfs-builder#v2.5.0"
   },
   "devDependencies": {
