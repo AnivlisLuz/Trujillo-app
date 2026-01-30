@@ -7,7 +7,7 @@
  * instead of using frequencies.txt
  */
 
-import { osmToGtfs, OSMPBFReader, loadCustomStops } from 'trufi-gtfs-builder';
+import { osmToGtfs, OSMOverpassDownloader, loadCustomStops } from 'trufi-gtfs-builder';
 import type { CustomStop } from 'trufi-gtfs-builder';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -56,18 +56,20 @@ async function main() {
   console.log('Starting GTFS generation for Trujillo, Peru (StopTimes version - no frequencies)...');
   console.log('This version generates individual trips with specific departure times\n');
 
-  const pbfPath = path.join(__dirname, 'trujillo.osm.pbf');
+  // Trujillo bounding box for Overpass API
+  const bounds = {
+    west: -79.1233,
+    south: -8.2240,
+    east: -78.6850,
+    north: -7.8528
+  };
+
   const customStopsPath = path.join(__dirname, 'all_stops.geojson');
 
-  console.log(`Using PBF file: ${pbfPath}`);
+  console.log(`Using Overpass API with BBOX: ${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
   console.log('Filtering routes with hash=* tag only');
 
   const ignoredRoutes = loadIgnoredRoutes();
-
-  // Check if PBF file exists
-  if (!fs.existsSync(pbfPath)) {
-    throw new Error(`PBF file not found: ${pbfPath}`);
-  }
 
   // Load custom stops (if file exists)
   const customStops = loadStopsFromGeoJSON(customStopsPath);
@@ -77,16 +79,16 @@ async function main() {
     console.log('No custom stops file found, using auto-generated stops from OSM');
   }
 
-  // Create a custom reader to log what's being loaded
-  const reader = new OSMPBFReader(pbfPath);
-  console.log('\nLoading data from PBF...');
+  // Create Overpass downloader
+  const osmDataGetter = new OSMOverpassDownloader(bounds);
+  console.log('\nLoading data from Overpass API...');
 
   // Test loading to see what we have
-  const testRoutes = await reader.getRoutes(['bus', 'share_taxi', 'minibus']);
-  const testWays = await reader.getWays();
-  const testStops = await reader.getStops();
+  const testRoutes = await osmDataGetter.getRoutes(['bus', 'share_taxi', 'minibus']);
+  const testWays = await osmDataGetter.getWays();
+  const testStops = await osmDataGetter.getStops();
 
-  console.log(`Found in PBF: ${Object.keys(testRoutes).length} routes, ${Object.keys(testWays).length} ways, ${Object.keys(testStops).length} stops`);
+  console.log(`Found from Overpass: ${Object.keys(testRoutes).length} routes, ${Object.keys(testWays).length} ways, ${Object.keys(testStops).length} stops`);
 
   // Count routes with hash
   let routesWithHash = 0;
@@ -110,7 +112,7 @@ async function main() {
         log: true,
       },
       geojsonOptions: {
-        osmDataGetter: new OSMPBFReader(pbfPath),
+        osmDataGetter,
         transformTypes: ['bus', 'share_taxi', 'minibus'],
         skipRoute: (route: any) => {
           // Skip routes in the ignored list
