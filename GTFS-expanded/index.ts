@@ -152,7 +152,7 @@ async function main() {
           contactUrl: 'https://trufi-association.org',
           startDate: '20251222',
           endDate: '20261221',
-          id: 'trujillo-peru-stoptimes',
+          id: 'pe-trujillo',
         },
 
         // Use schedule-based GTFS (no frequencies.txt)
